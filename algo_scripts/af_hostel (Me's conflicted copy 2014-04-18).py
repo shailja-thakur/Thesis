@@ -24,7 +24,6 @@ import pandas as pd
 import matplotlib.dates as md
 from pandas import *
 import decimal
-from scipy.stats import nanmean
 from pylab import *
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pylab as plt
@@ -32,7 +31,6 @@ import activity_finder_algorithm as af
 import localize as loc
 from evaluate import *
 import numpy
-
 # import classifier as cl
 # import classify_sound as cs
 import warnings
@@ -115,7 +113,7 @@ def filter_drops(df_p, phase):
                         if (i - 2) in df_p.index:
                             if (i + 3) in df_p.index :
 
-                                pwin = (df_p.ix[i - 2][phase]+ df_p.ix[i - 1][phase] + df_p.ix[i][phase])/3
+                                pwin = (df_p.ix[i - 2][phase]+ df_p.ix[i - 1][phase] + df_p.ix[i - 1][phase])/3
                                 nwin = df_p.ix[i + 3][phase]
                                 df_p.ix[i+1][phase] = (pwin + nwin) / 2
                         else :
@@ -932,14 +930,12 @@ def max_min_timestamp(loc_csv ):
     loc_dir = loc_csv + '*.csv'
 
     for user_loc in glob.glob(loc_dir):
-
         df_loc = pd.read_csv(user_loc)
         df_loc = df_loc.sort_index(by = 'timestamp')
         print user_loc
         for i in df_loc.index:
             if int(df_loc.ix[df_loc.index[0]]['timestamp']) < int(min_timestamp):
                 min_timestamp = df_loc.ix[df_loc.index[0]]['timestamp']
-
             if int(df_loc.ix[df_loc.index[-1]]['timestamp']) > int(max_timestamp):
                 max_timestamp = df_loc.ix[df_loc.index[-1]]['timestamp']
         
@@ -966,7 +962,7 @@ def fill_missing_samples(loc_csv , day):
         beg = min_timestamp
         end = max_timestamp
         for idx in df_loc.index:
-            print idx
+            
             curr_time = df_loc.ix[idx]['timestamp']
             curr_location = df_loc.ix[idx]['location']
             if idx == 0:
@@ -1088,30 +1084,22 @@ def users_location_table(csv_path, day):
 
     for i in glob.glob(DATA_PATH + day + MISSING_FORMATTED_PATH + '*.csv'):
         frame = pd.read_csv(i)
-        
-        print i
-        print len(frame)
         columns.append(frame.columns[1:][0][3])
 
     header = ''
     for i in columns:
         header = header + '_' + i 
-    #df_users = pd.DataFrame(columns = [header])
 
     writer.writerow(['timestamp'] + [header]  )
     for i in glob.glob(DATA_PATH + day + MISSING_FORMATTED_PATH + '*.csv'):
         frame = pd.read_csv(i)
-
-        frame = frame.drop_duplicates(['timestamp'])
         df = pd.merge(df, frame)
 
-
-
         #print df
-    print len(df)
+    print df
     for idx in df.index:
         column = ''
-        #print idx
+
         for col in df.columns[1:]:
             
             column = column + str(df.ix[idx][col])
@@ -1128,8 +1116,6 @@ def distinct(csv_path):
     
     df = pd.read_csv(csv_path +'location_room_set.csv')
     df = df.drop_duplicates()
-    df = df.sort_index(by = 'start_time')
-    df.index = arange(0, len(df))
     df.to_csv(csv_path +'location_room_set.csv', cols = df.columns.values, index = False)
 
     df = pd.read_csv(csv_path + 'location_room_set.csv')
@@ -1140,7 +1126,6 @@ def distinct(csv_path):
     unique_rooms = df.room_set.unique()
     for room in unique_rooms:
         print room
-        flag = 0
         rooms_idx_list = df.index[df.room_set == room]  
         df_rooms = df.ix[rooms_idx_list]
         #print df_rooms
@@ -1169,7 +1154,6 @@ def distinct(csv_path):
                     if (int(df_rooms.ix[idx + 1]['start_time']) - int(df_rooms.ix[idx]['end_time'])) <= 50:
                         print 'difference 1', df_rooms.ix[idx + 1]['end_time'], df_rooms.ix[idx]['end_time'], df_rooms.ix[idx]['room_set']
                         end_time = df_rooms.ix[idx]['end_time']
-                        flag = 1
                         continue
                         
                         #print df_rooms.ix[idx]['start_time'], df_rooms.ix[idx]['end_time'], df_rooms.ix[idx + 1]['room_set']
@@ -1178,51 +1162,21 @@ def distinct(csv_path):
 
             
                     else:
-                        if flag == 1:
-
-                            print 'Writing difference greater', start_time, end_time, room
+                        print 'Writing difference greater', start_time, end_time, room
                         
                         
-                            writer.writerow([start_time] + [end_time] + [room])
-                            flag = 0
-                        else:
-                            print 'Writing difference greater', df_rooms.ix[idx]['start_time'], df_rooms.ix[idx]['end_time'], room
-                            writer.writerow([df_rooms.ix[idx]['start_time']] + [df_rooms.ix[idx + 1]['end_time']] + [room])
-                        
+                        writer.writerow([start_time] + [end_time] + [room])
                         start_time = df_rooms.ix[idx + 1]['start_time']
-                        #end_time = df_rooms.ix[idx + 1]['end_time']
                         room = df_rooms.ix[idx + 1]['room_set']
 
                         print 'next value',start_time, df_rooms.ix[idx + 1]['end_time'], room
-
-
 
     #df = pd.DataFrame({'start_time' : start, 'end_time' : end, 'room_set' : rooms})
     #df.to_csv(csv_path + 'reduced_location_room_set.csv', index = False)
 
 
-def check(csv_path):
-    df = pd.read_csv(csv_path + 'reduced_location_room_set.csv')
-    list_idx = []
-    for idx in df.index:
-        print df.ix[idx]
-        start_time = df.ix[idx]['start_time']
-        end_time = df.ix[idx]['end_time']
 
-        for start,end,ids in zip(df['start_time'], df['end_time'], df.index):
-            #print df.ix[ids]
-            if int(start_time) in range(int(start), int(end)):
-                #print 'start_time', int(start_time), 'start', int(start), 'end', int(end)
-                if end_time in range(int(start), int(end)):
-                    print ids, 'start_time', int(start_time), 'end_time', int(end_time), 'start', int(start), 'end', int(end)
-                    
-                    list_idx.append(idx)
-    print list_idx
 
-    df = df.ix[df.index - list_idx]
-
-    df.to_csv(csv_path + 'reduced_location_room_set.csv', cols = df.columns.values, index = False)
-    print df
 
 def get_rooms_corresponding_loc_set(csv_loc, filename):
     df = pd.read_csv(csv_loc + filename)
@@ -1248,7 +1202,7 @@ def get_rooms_corresponding_loc_set(csv_loc, filename):
         r = r[1:-1].split(',')
         for i in r:
             room_set.append(i.split('.')[0])
-        print idx
+
         #print room_set
         # room_set = [int(r) for r in room_set if r != ',' ]
         # room_set = [int(r) for r in room_set if r != '"' ]
@@ -1648,8 +1602,7 @@ def nonoverlap_event_association(df_nonoverlap_window_edges, df_nonoverlap_df, e
     print "-" * stars
     df_nonoverlap_light_events = nonoverlap_room_event_mapping(df_nonoverlap_window_edges, edge_light_df, df_metadata_rooms, 'light')
     
-    df_nonoverlap_power_events.to_csv('/home/shailja/shailja.thakur90@gmail.com/Thesis/DataSet/nonoverlap_power_events.csv', cols = df_nonoverlap_power_events.columns.values, index = False)
-    df_nonoverlap_light_events.to_csv('/home/shailja/shailja.thakur90@gmail.com/Thesis/DataSet/nonoverlap_light_events.csv', cols = df_nonoverlap_light_events.columns.values, index = False)
+    
     print df_nonoverlap_light_events
     return df_nonoverlap_power_events, df_nonoverlap_light_events
 
@@ -1768,19 +1721,14 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
     o_phaze = []
     o_event_time = []
     #print df_nonoverlap_power_events
-    df_overlap_window_edges = df_overlap_window_edges.drop_duplicates(['start_time', 'end_time'])
-    edge_df = edge_df.drop_duplicates()
-    print 'Checking the edges for Overlapping windows'
     for idx in df_overlap_window_edges.index:
-        
         start  = df_overlap_window_edges.ix[idx]['start_time']
         end = df_overlap_window_edges.ix[idx]['end_time']
         #print idx
         win_room = df_overlap_window_edges.ix[idx]['rooms']
         #print win_room
-        print 'Index', idx, 'Rooms overlapping', win_room
         if types == 'power':
-            #print 'Power edges'
+            print 'Power edges'
             edge_indices = df_overlap_window_edges.ix[idx]['edge_power_indices']
             if edge_indices == '' or edge_indices == []:
                 print 'Edge indices empty'
@@ -1788,9 +1736,9 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
             else:
                 edge_indices =  edge_indices.split(',')
             
-            print 'Power edges', edge_indices
+            print edge_indices
         else:
-            #print 'light edges'
+            print 'light edges'
             edge_indices = df_overlap_window_edges.ix[idx]['edge_light_indices']
 
             if edge_indices == '' or edge_indices == []:
@@ -1798,10 +1746,10 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
                 continue
             else:
                 edge_indices =  edge_indices.split(',')
-            print 'Light Edges', edge_indices
+            print edge_indices
 
         for ids in edge_indices:
-            print 'Checking Rooms for index', ids
+
             # get edge phase and magnitude 
             edge_type = edge_df.ix[int(ids)]['edge']
             edge_phase = edge_df.ix[int(ids)]['phase']
@@ -1812,7 +1760,7 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
             overlapping_rooms = []
             appliance =  []
             for rm in win_room:
-                print 'Checking for Room', rm 
+                #print rm 
 
                 # rm_metadata = df_metadata_rooms.power_appliance[df_metadata_rooms.room == rm]
                 # rm_metadata = str(rm_metadata).split('\n')[0].split('[')[1].split(']')[0].split(',')
@@ -1841,12 +1789,12 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
                             if rm not in overlapping_rooms:
                                 overlapping_rooms.append(rm)
                             appliance.append(meta[0])
-            print 'Overlapping Rooms for Edge',ids,'are', overlapping_rooms, 'Edge Time', edge_time
+            print 'overlapping rooms for edge',ids,overlapping_rooms
             if len(overlapping_rooms) == 1:
 
                 #allocate the edge to the room
-                #print overlapping_rooms[0],appliance[0]
-                #print edge_magnitude, edge_time
+                print overlapping_rooms[0],appliance[0]
+                print edge_magnitude, edge_time
                 edge.append(edge_type)
                 mag.append(edge_magnitude)
                 phaze.append(edge_phase)
@@ -1874,11 +1822,8 @@ def overlap_room_events(df_overlap_window_edges, edge_df,df_metadata_rooms, type
             overlapping_rooms = []
             appliance = []
     
-    #print len(edge), len(mag),len(phaze),len(room), len(app),len(start_time),len(end_time)
+    print len(edge), len(mag),len(phaze),len(room), len(app),len(start_time),len(end_time)
     df_nonoverlap_event = pd.DataFrame({ 'Room' : room,'Appliance' : app , 'Edge' : edge, 'Magnitude' : mag, 'Event Time' : event_time, 'Phase' : phaze })    
-    print df_nonoverlap_event.ix[df_nonoverlap_event.Room == 5]
-    print df_nonoverlap_event.ix[df_nonoverlap_event.Room == 6]
-
     # df_power_overlap_events = pd.DataFrame({'start_time' : o_start_time, 'end_time' : o_end_time,
     #  'edge_indices' : o_edge, 'rooms' : o_room, 'edge' : o_edge_type, 'appliance' : o_appliance}) 
     df_power_overlap_events = pd.DataFrame({ 'Room' : o_room,'Appliance' : o_appliance , 'Edge' : o_edge_type, 'Magnitude' : o_mag, 'Event Time' : o_event_time, 'Phase' : o_phaze })    
@@ -1904,19 +1849,19 @@ def events_sound_detection(df_overlap_events, edge_ids,  edge_df, df_metadata_ro
     print 'length',len(df_overlap_events)
     final_room = 0
     overlap_rooms = df_overlap_events.copy()
-
-    df_overlap_events = df_overlap_events.drop_duplicates(['Appliance','Event Time', 'Phase'])
-
     for idx, ids in zip(df_overlap_events.index, edge_ids):
         #print df_overlap_events.ix[idx]
         edge_index = ids
-        #print edge_index
-
+        print edge_index
         edge_time = int(edge_df.time[edge_df.index == edge_index]) 
         edge_mag = edge_df.magnitude[edge_df.index == edge_index]
         edge_phase = edge_df.phase[edge_df.index == edge_index]
-       
+
         o_rooms = df_overlap_events.ix[idx]['Room']
+        
+        #print edge_index, edge_time, o_rooms
+        bef = []
+        aft = []
         
         bef_start_time = int(edge_time) - 50
         aft_start_time = bef_end_time = int(edge_time)
@@ -1926,100 +1871,149 @@ def events_sound_detection(df_overlap_events, edge_ids,  edge_df, df_metadata_ro
         max_euc = 0
         #euc_d = []
         for room in o_rooms:
-            print  edge_time, edge_mag, edge_phase, room
             euc_distance = []
-
+            euc_d = []
             
             if (( bef_start_time > edge_df.time[edge_df.index[-1]]) | (aft_end_time > edge_df.time[edge_df.index[-1]] )):
                 break
 
             # Fetch audio features for the room (before and after) event
-            
-            # print '########## WIFI ############'
-            # wifipath = DATA_PATH + day +'/' + 'Location_Data/Wifi_Formatted_Data/' + 'train_C00' + room + '.csv'
-            # print wifipath
-            # print edge_time
-            # if os.path.isfile(wifipath):
-            #     wifi_df = pd.read_csv(wifipath)
-            #     wifi_df['timestamp'] = wifi_df['timestamp']
-            #     if edge_type == 'rise':
-            #         wf_bef_idx = wifi_df.index[((wifi_df.timestamp >= (int(edge_time) - 200)) & (wifi_df.timestamp <= bef_end_time))]
-            #         wifi_win_bef = wifi_df.ix[wf_bef_idx]['c4:0a:cb:5c:19:50']
-            #         print len(wf_bef_idx)
-                    
-            #         print 'Wifi window_before event  for', room,'event time', datetime.datetime.fromtimestamp(edge_time)
-            #         print wifi_win_bef
-            #     else:
-            #         wf_aft_idx = wifi_df.index[((wifi_df.timestamp >= aft_start_time) & (wifi_df.timestamp <= (int(edge_time) - 200)))] 
-            #         wifi_win_aft = wifi_df.ix[wf_aft_idx]['c4:0a:cb:5c:19:50']
-            #         print len(wf_aft_idx)
-                   
-            #         print 'Wifi window_after event for', room, 'event time', datetime.datetime.fromtimestamp(edge_time)
-                   
-            #         print wifi_win_aft
-                
-
-               
-            print '############   AUDIO ##########'
+            print room
             audio_df = pd.read_csv(AUDIO_FILES_CSV_PATH + '/' + day + '/' + 'C00'+ room + '.csv')
+
+
 
             audio_df['time'] = audio_df['time'] / 1000
             bef_idx = audio_df.index[((audio_df.time >= bef_start_time) & (audio_df.time <= bef_end_time))]
             aft_idx = audio_df.index[((audio_df.time >= aft_start_time) & (audio_df.time <= aft_end_time))]
-           
 
-            # USED FOR DISTANCE METRIC CALCULATION
-
-            # MFCC_bef = audio_df.ix[bef_idx][audio_df.columns[1:-1]].mean()
-            # MFCC_aft = audio_df.ix[aft_idx][audio_df.columns[1:-1]].mean()
+            MFCC_bef = audio_df.ix[bef_idx][audio_df.columns[1:-1]].mean()
+            MFCC_aft = audio_df.ix[aft_idx][audio_df.columns[1:-1]].mean()
             euc_dist = 0
-            # for mi, mj in zip(MFCC_bef, MFCC_aft):
+            for mi, mj in zip(MFCC_bef, MFCC_aft):
+                        euc_dist = euc_dist + math.pow((mi - mj), 2)
+
+            eucledian_distance = math.sqrt(euc_dist) 
+            #euc_d.append(eucledian_distance)
+
+            if max_euc < eucledian_distance:           
+                print max_euc, eucledian_distance
+                max_euc = eucledian_distance
+                final_room = room
+        # print euc_d
+        # if euc_d[0] < euc_d[1]:
+        #     final_room = o_rooms[0]
+        # else:
+        #     final_room = o_rooms[1] 
+
+            # for ids in audio_df.index:
+            #     b = 0
+            #     a = 0
+            #     euc_dist = 0
+            #     sum_mfcc = 0
+            #     audio_time = int(audio_df.ix[ids]['time']) / 1000
+                #     # Calculate 2 min window before and after events 
+                
+            #     if ((audio_time >= bef_start_time) & (audio_time <= bef_end_time)):
+                    
+            #         bef.append(ids)
+            #         b = ids
+             
+            #     if ((audio_time > aft_start_time) & (audio_time <= aft_end_time)):
+                    
+            #         aft.append(ids)
+            #         a = ids
+                
+            #     MFCC_bef = audio_df.ix[b][audio_df.columns[1:-1]]
+            #     MFCC_aft = audio_df.ix[a][audio_df.columns[1:-1]]
+
+            #     # euc distance with MFCC 1 feature only
+                
+            #     #sum_mfcc = math.pow((MFCC_bef[0] - MFCC_aft[0]), 2)
+
+            #     #euc_d.append( math.sqrt(sum_mfcc) )
+
+            #     # euc distance with MFCC 1-13 feature only
+            #     for mi, mj in zip(MFCC_bef, MFCC_aft):
             #             euc_dist = euc_dist + math.pow((mi - mj), 2)
 
-            # eucledian_distance = math.sqrt(euc_dist) 
-            # #euc_d.append(eucledian_distance)
+            #     euc_distance.append( math.sqrt(euc_dist) )
+            # #print euc_distance
+            
+            # #eucledian_f = np.mean(euc_d)
+            
 
-            # if max_euc < eucledian_distance:           
-            #     print max_euc, eucledian_distance
-            #     max_euc = eucledian_distance
+
+            # eucledian = np.mean(euc_distance)
+            # if max_euc < eucledian:
+            #     print max_euc, eucledian
+            #     max_euc = eucledian
             #     final_room = room
-#############################################################################################################
 
 
-
-            for b,a in zip(bef_idx, aft_idx):
-                
-                MFCC_bef = audio_df.ix[b][audio_df.columns[1:-1]]
-                MFCC_aft = audio_df.ix[a][audio_df.columns[1:-1]]
-
-               
-
-                # euc distance with MFCC 1-13 feature only
-                for mi, mj in zip(MFCC_bef, MFCC_aft):
-                        euc_dist = euc_dist + math.pow((float(mi) - float(mj)), 2)
-
-                euc_distance.append( math.sqrt(euc_dist) )
-                print 'euc distance', math.sqrt(euc_dist)
-                euc_dist = 0
-            
-            
-            eucledian = nanmean(euc_distance)
-            
-            print 'eucledian', eucledian, 'Actual Room', room
-            
-            if max_euc < eucledian:
-                print max_euc, eucledian
-                max_euc = eucledian
-                final_room = room
-
-            print 'eucledian', max_euc,'Room Associated', final_room, 'event time', datetime.datetime.fromtimestamp(edge_time), 'edge magnitude', edge_mag
-        
+            print max_euc, final_room
+        #df_overlap_events[idx, 'Room'] = final_room
         df_overlap_events.ix[idx, 'Room'] = final_room
 
-    print len(df_overlap_events)
+        print 'index', edge_index,'room', room,'phase',edge_phase,'magnitude', edge_mag,'time', time(edge_time), 'euc_dist', eucledian_distance
+
+    # df_nonoverlap_event = pd.DataFrame({ 'Room' : final_room, 'Appliance' : df_overlap_events['appliance'] ,'Start Time' : df_overlap_events['start_time'], 'End Time' : df_overlap_events['end_time'], 'Edge' : df_overlap_events['edge']
+    #             , 'Magnitude' : df_overlap_events['magnitude'], 'Event Time' : df_overlap_events['edge_time'], 'Phase' : df_overlap_events['edge_phase']})
+        
+    #print df_overlap_events
+    print 'length after', len(df_overlap_events)
     return df_overlap_events, overlap_rooms
 
 
+            #print 'after last and  before last',aft[-1], bef[-1]
+            # list of all the MFCCs from the row
+            #print 'before', audio_df.ix[bef][audio_df.columns[1:-1]]
+            #print 'after', audio_df.ix[aft][audio_df.columns[1:-1]]
+            # for mi, mj in zip(MFCC_bef, MFCC_aft):
+            #         euc_dist = euc_dist + math.pow((mi - mj), 2)
+
+            #     euc_dist = math.sqrt(euc_dist) 
+
+            # MFCC_bef = audio_df.ix[bef][audio_df.columns[1:-1]].mean()
+            # MFCC_aft = audio_df.ix[aft][audio_df.columns[1:-1]].mean()
+            # print 'before', MFCC_bef
+            # print 'after', MFCC_aft
+            
+
+            #print before
+            #print after
+            
+            #print 'index', edge_index,'room', room, 'time', edge_time, 'mfcc1', after[0]
+            # print before
+            # print room
+            # print after
+            #df = pd.DataFrame({'room' : room, 'before' : before, 'after' : after})
+        #print df.head(5) 
+        #sys.exit(1) 
+
+            # sum_of_squares=sum(pow(df['before']-df['after']),2)
+            # euc_distance.append(math.sqrt(sum_of_squares))
+        #print df
+        #df_distance = pd.DataFrame({'distance':euc_distance})
+       
+        # find maximum of all the distance and allocate the edge to room corresponding to that room
+        # max_dist = pd.idxmax(df_distance['distance'])
+        # room = o_rooms[max_dist + 1]
+
+        #allocate edge to this room
+        #df_overlap_events.ix[idx]['rooms'] = room
+        
+        #return df_overlap_events
+
+
+# def sound_classify():
+
+
+# def edge_matching(df):
+#     # Create separate edge list for all the rooms
+
+#     # Generate matching pair of rise and fall edges 
+#     return 1
 def overlap_event_association(df_overlap_window_edges, df_overlap_df, edge_light_df, edge_power_df, day):
     # Retrieve metadata 
     df_metadata_rooms = pd.DataFrame(metadata_rooms)
@@ -2033,23 +2027,18 @@ def overlap_event_association(df_overlap_window_edges, df_overlap_df, edge_light
     df_overlap_power_events, df_nonoverlap_power_events,ids_power = overlap_room_events(df_overlap_window_edges, edge_power_df,df_metadata_rooms, 'power')
     print 'Overlap light events recognition'
     df_overlap_light_events, df_nonoverlap_light_events, ids_light = overlap_room_events(df_overlap_window_edges, edge_light_df,df_metadata_rooms, 'light')
-    df_nonoverlap_power_events.to_csv('/home/shailja/shailja.thakur90@gmail.com/Thesis/DataSet/resolved_overlap_power_events.csv', cols = df_nonoverlap_power_events.columns.values, index = False)
-    df_nonoverlap_light_events.to_csv('/home/shailja/shailja.thakur90@gmail.com/Thesis/DataSet/resolved_overlap_light_events.csv', cols = df_nonoverlap_light_events.columns.values, index = False)
+
     #Power edges
     # UNDEBUGGED AND UNTESTED
     print "-" * stars
     print "            SOUND DETECTION ON OVERLAP ROOMS FOR POWER EDGES"
     print "-" * stars
     df_overlap_power, overlap_power_rooms = events_sound_detection(df_overlap_power_events, ids_power, edge_power_df, df_metadata_rooms, day)
-    print 'AFTER SOUND DETECTION ON POWER EDGES'
-    print df_overlap_power
+
     print "-" * stars
     print "            SOUND DETECTION ON OVERLAP ROOMS FOR LIGHT EDGES"
     print "-" * stars
     df_overlap_light, overlap_light_rooms = events_sound_detection(df_overlap_light_events, ids_light, edge_light_df, df_metadata_rooms, day)
-    print 'AFTER SOUND DETECTION ON LIGHT EDGES'
-    print df_overlap_light
-
     return df_nonoverlap_power_events, df_nonoverlap_light_events, df_overlap_power, df_overlap_light, overlap_power_rooms, overlap_light_rooms
     # events_sound_detection(df_overlap_light_events, edge_light_df, df_metadata_rooms)
     #events_sound_detection(df_overlap_light_events, edge_light_df, df_metadata_rooms, 'light')
@@ -2304,22 +2293,18 @@ if __name__ == '__main__':
     
     # room_no = sys.argv[2]
     rooms = ['1','2','3','4','5','6']
-    #test_csv_path = (WIFI_TRAINING_DATA_PATH)
+    # test_csv_path = (WIFI_TRAINING_DATA_PATH)
    
     # print rooms
-
-
     
     logger.info("Starting Algorithm...")
     
     df_p = pd.read_csv(power_csv)
     df_l = pd.read_csv(light_csv)
-    
+    # df_p = df_p.ix[df_p['time'] >= 1392042600]
+    # df_l = df_p.ix[df_l['time'] >= 1392042600]
+
     df_p_copy = df_p.copy()
-
-
-
-
     
 
     # Step 1: Smoothening power phase stream (Y)
@@ -2382,7 +2367,7 @@ if __name__ == '__main__':
     #     wifi_location(formatted_csv_path, i)
     
     #print 'Filling in missing samples'
-    #print 'Filling missing samples in WIFI csv for each user '
+    # print 'Filling missing samples in WIFI csv for each user '
     
     #fill_missing_samples(DATA_PATH + str(day) + WIFI_INOUT, day)
     
@@ -2397,8 +2382,7 @@ if __name__ == '__main__':
     # get_rooms_corresponding_loc_set(USER_ATTRIBUTION_TABLES  , 'user_location_table.csv')
     
     # df_set = overlapping_non_overlapping_sets(USER_ATTRIBUTION_TABLES , 'revised_user_location_table.csv')
-    #distinct(USER_ATTRIBUTION_TABLES )
-    #check(USER_ATTRIBUTION_TABLES)
+    # distinct(USER_ATTRIBUTION_TABLES )
     ##########################
 
 
@@ -2454,10 +2438,9 @@ if __name__ == '__main__':
  
         calc_precision(df_test_n, gt)
 
-############################################################################################
 
     # df_rise = df[df.Edge == 'rise']
-    # df_fall = df[df.Edge == 'fall']   
+    # df_fall = df[df.Edge == 'fall']
     # for room in rooms:
     #     df_r = df[df.Room == room]
 
@@ -2483,42 +2466,30 @@ if __name__ == '__main__':
     # Accuracy Calculation in terms of Precision/Recall
 
     ###########################
-    #Total accuracy for the full day length
-    print 'Detected events and rooms '
-    print df
-    print "-" * stars
-    print "            TOTAL ACCURACY"
-    print "-" * stars
-    df_test = df.copy()    
-    calc_ts_accuracy(df_test, pd.read_csv(gt_path))
+    # Total accuracy for the full day length
+    # print 'Detected events and rooms '
+    # print df
+    # print "-" * stars
+    # print "            TOTAL ACCURACY"
+    # print "-" * stars
+    # df_test = df.copy()    
+    # calc_ts_accuracy(df_test, pd.read_csv(gt_path))
 
-    # accuracy individual rooms for day 
+    # # accuracy individual rooms for day 
 
-    rooms  = pd.read_csv(gt_path).Room.unique()
+    # rooms  = pd.read_csv(gt_path).Room.unique()
     
-    for room in rooms:
-        df_test = df.copy()
-        print "-" * stars
-        print "            ROOM" + str(room)
-        print "-" * stars
-        gt = pd.read_csv(GROUNDTRUTH_PATH + '/' + str(day).lower() + '/' + 'C00' + str(room) + '.csv')
-        df_test = df_test[df_test.Room == str(room)]
-        print 'Ground Truth', gt
-        
-        df_test['actual_time']= [datetime.datetime.fromtimestamp(i) for i in df_test['Event Time']]
-        print 'Test data', df_test.drop_duplicates()
+    # for room in rooms:
+    #     df_test = df.copy()
+    #     print "-" * stars
+    #     print "            ROOM" + str(room)
+    #     print "-" * stars
+    #     gt = pd.read_csv(GROUNDTRUTH_PATH + '/' + str(day).lower() + '/' + 'C00' + str(room) + '.csv')
+    #     df_test = df_test[df_test.Room == str(room)]
+    #     print 'Ground Truth', gt
+    #     print 'Test data', df_test.drop_duplicates()
  
-        calc_room_accuracy(df_test, gt)
-
-    filename_op = OUTPUT  + 'predicted_timeslices_' + str(day).lower() + '.csv'
-    print "Generated Time Slices"
-    phase = ['lightphase1','lightphase2','lightphase3','powerphase2','powerphase3']
-    for p in phase:
-
-        df = pd.read_csv(filename_op)
-       
-        op_df = df.ix[df.phase == p]
-        print op_df
+    #     calc_room_accuracy(df_test, gt)
 
 
     ################################
